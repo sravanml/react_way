@@ -1,57 +1,96 @@
-/**
- * @file TodoApp.jsx
- * @description A simple React Todo App using state management.
- * @version 1.0.0
- * @author SS
- * @Date 2024-01-11
- */
+import { Component } from "react";
+import { toast } from "react-toastify";
 
-import React, { useState } from 'react';
+class HobbiesFiller extends Component {
+  state = {
+    newHobby: "",
+    hobbies: [],
+  };
 
-const TodoApp = () => {
+  onNewHobbyChange = (e) => {
+    this.setState({ newHobby: e.target.value });
+  };
 
-  // State to store the list of todos
-  const [todoInput, setTodoInput] = useState('');
-  // State to store the current todo being typed
-  const [todos, setTodos] = useState([]);
-
-  // Function to add a todo
-  const addTodo = () => {
-    if (todoInput.trim() !== '') {
-      setTodos([...todos, { text: todoInput }]);
-      setTodoInput('');
+  onAddNewHobby = () => {
+    const { newHobby, hobbies } = this.state;
+    const newHobbyLC = newHobby.toLowerCase();
+    if (!newHobby) {
+      toast("Please enter a valid hobby!");
+      return;
     }
+
+    if (hobbies.includes(newHobbyLC)) {
+      toast("This hobby already exists!");
+      return;
+    }
+
+    this.setState({ hobbies: [newHobbyLC, ...hobbies], newHobby: "" });
+    toast(`${newHobby} added successfully!`);
+    //
   };
 
-  // Function to remove a todo
-  const removeTodo = (index) => {
-    const updatedTodos = [...todos];
-    updatedTodos.splice(index, 1);
-    setTodos(updatedTodos);
+  onDeleteHobby = (id) => {
+    console.log("Index to delete: ", id);
+    const updatedState = this.state.hobbies.filter(
+      (item, index) => index !== id
+    );
+
+    console.log("updatedState: ", updatedState);
+    this.setState({ hobbies: updatedState });
+    toast(`${this.state.hobbies[id]} removed successfully!`);
   };
 
-  return (
-    <div>
-      <h1>Todo App</h1>
-      <div>
-        <input
-          type="text"
-          placeholder="whats your plan?"
-          value={todoInput}
-          onChange={(e) => setTodoInput(e.target.value)}
-        />
-        <button onClick={addTodo}>Add</button>
+  render() {
+    const { newHobby, hobbies } = this.state;
+    console.log("Re-Render: ", { newHobby, hobbies });
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          flexDirection: "column",
+          width: "400px",
+        }}
+      >
+        <div className="form-element">
+          <p style={{ fontWeight: 600 }}>New Hobby</p>
+          <div style={{ display: "flex" }}>
+            <input
+              style={{ outline: "none", width: "100%", padding: "12px" }}
+              type="text"
+              placeholder="Enter a hobby"
+              value={newHobby}
+              onChange={this.onNewHobbyChange}
+            />
+            <button
+              style={{ width: "200px", fontWeight: 600 }}
+              onClick={this.onAddNewHobby}
+            >
+              Add Hobby
+            </button>
+          </div>
+        </div>
+        <div>
+          <h1>My Hobbies</h1>
+          <hr />
+          <ul>
+            {hobbies.map((current, index) => {
+              return (
+                <li style={{ textTransform: "capitalize" }} key={current}>
+                  <div>
+                    <p>{current}</p>
+                    <button onClick={() => this.onDeleteHobby(index)}>
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </div>
-      <ul>
-        {todos.map((todo, index) => (
-          <li key={index}>
-            {todo.text}
-            <button onClick={() => removeTodo(index)}>Remove</button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
+    );
+  }
+}
 
-export default TodoApp;
+export default HobbiesFiller;
