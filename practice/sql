@@ -1,0 +1,888 @@
+find all of the nba player having consecutive 20 point season
+
+SELECT
+  *
+FROM
+  bootcamp.nba_player_seasons
+WHERE
+  player_name = 'LeBron James'
+
+----------------------------------------------------
+SELECT
+  player_name, season,pts
+FROM
+  bootcamp.nba_player_seasons
+WHERE
+  player_name = 'LeBron James'
+-------------------------------------------
+
+SELECT
+  player_name,
+  season,
+  pts,
+  LAG(pts, 1) OVER (
+    PARTITION BY
+      player_name
+    ORDER BY
+      season
+  ) AS pts_last_season
+FROM
+  bootcamp.nba_player_seasons
+WHERE
+  player_name = 'LeBron James'
+--------------------------------------
+--lag pts for last season
+SELECT
+  player_name,
+  season,
+  pts,
+  LAG(pts, 1) OVER (
+    PARTITION BY
+      player_name
+    ORDER BY
+      season
+  ) AS pts_last_season
+FROM
+  bootcamp.nba_player_seasons
+WHERE
+  player_name = 'LeBron James'
+ORDER BY
+  season
+-------------------------------------
+--lead pts for next season
+SELECT
+  player_name,
+  season,
+  pts,
+  LAG(pts, 1) OVER (
+    PARTITION BY
+      player_name
+    ORDER BY
+      season
+  ) AS pts_last_season,
+  LEAD(pts, 1) OVER (
+    PARTITION BY
+      player_name
+    ORDER BY
+      season
+  ) AS pts_next_season
+FROM
+  bootcamp.nba_player_seasons
+WHERE
+  player_name = 'LeBron James'
+ORDER BY
+  season
+
+------------------
+
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season,
+      LEAD(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_next_season
+    FROM
+      bootcamp.nba_player_seasons
+    WHERE
+      player_name = 'LeBron James'
+    ORDER BY
+      season
+  )
+SELECT
+  *,
+  CASE
+    WHEN pts >= 20
+    AND pts_last_season >= 20 THEN 0
+    ELSE 1
+  END AS pts_stayed_above_20
+FROM
+  lagged
+----------------------------
+
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season,
+      LEAD(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_next_season
+    FROM
+      bootcamp.nba_player_seasons
+    WHERE
+      player_name IN ('LeBron James', 'Allen Iverson')
+    ORDER BY
+      season
+  )
+SELECT
+  *,
+  CASE
+    WHEN pts >= 20
+    AND pts_last_season >= 20 THEN 0
+    ELSE 1
+  END AS pts_stayed_above_20
+FROM
+  lagged
+
+------------------------
+optimze by creating cte
+
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season,
+      LEAD(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_next_season
+    FROM
+      bootcamp.nba_player_seasons
+    WHERE
+      player_name IN ('LeBron James', 'Allen Iverson')
+    ORDER BY
+      season
+  )
+SELECT
+  *,
+  CASE
+    WHEN pts >= 20
+    AND pts_last_season >= 20 THEN 0
+    ELSE 1
+  END AS pts_stayed_above_20
+FROM
+  lagged
+------------------------------------------
+
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season,
+      LEAD(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_next_season
+    FROM
+      bootcamp.nba_player_seasons
+    WHERE
+      player_name IN ('LeBron James', 'Allen Iverson')
+    ORDER BY
+      season
+  ),
+  did_change AS (
+    SELECT
+      *,
+      CASE
+        WHEN pts >= 20
+        AND pts_last_season >= 20 THEN 0
+        ELSE 1
+      END AS pts_stayed_above_20
+    FROM
+      lagged
+  )
+SELECT
+  *,
+  SUM(pts_stayed_above_20) OVER (
+    PARTITION BY
+      player_name
+    ORDER BY
+      season ROWS BETWEEN UNBOUNDED PRECEDING
+      AND CURRENT ROW
+  ) AS streak_identifier_one,
+  SUM(pts_stayed_above_20) OVER (
+    PARTITION BY
+      player_name
+    ORDER BY
+      season
+  ) AS streak_identifier_two
+FROM
+  did_change
+
+-----------------------------------------------
+
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season,
+      LEAD(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_next_season
+    FROM
+      bootcamp.nba_player_seasons
+    WHERE
+      player_name IN ('LeBron James', 'Allen Iverson')
+    ORDER BY
+      season
+  ),
+  did_change AS (
+    SELECT
+      *,
+      CASE
+        WHEN pts >= 20
+        AND pts_last_season >= 20 THEN 0
+        ELSE 1
+      END AS pts_stayed_above_20
+    FROM
+      lagged
+  )
+SELECT
+  *,
+  SUM(pts_stayed_above_20) OVER (
+    PARTITION BY
+      player_name
+    ORDER BY
+      season
+  ) AS streak_identifier
+FROM
+  did_change
+
+-----------------------
+one more cte for identifying streak
+
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season,
+      LEAD(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_next_season
+    FROM
+      bootcamp.nba_player_seasons
+    WHERE
+      player_name IN ('LeBron James', 'Allen Iverson')
+    ORDER BY
+      season
+  ),
+  did_change AS (
+    SELECT
+      *,
+      CASE
+        WHEN pts >= 20
+        AND pts_last_season >= 20 THEN 0
+        ELSE 1
+      END AS pts_stayed_above_20
+    FROM
+      lagged
+  ),
+  identified AS (
+    SELECT
+      *,
+      SUM(pts_stayed_above_20) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS streak_identifier
+    FROM
+      did_change
+  )
+SELECT
+  player_name,
+  streak_identifier,
+  COUNT(1) AS number_of_consecutive_seasons
+FROM
+  identified
+GROUP BY
+  player_name,
+  streak_identifier
+
+-------------------------------------------
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season,
+      LEAD(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_next_season
+    FROM
+      bootcamp.nba_player_seasons
+    WHERE
+      player_name IN ('LeBron James', 'Allen Iverson')
+    ORDER BY
+      season
+  ),
+  did_change AS (
+    SELECT
+      *,
+      CASE
+        WHEN pts >= 20
+        AND pts_last_season >= 20 THEN 0
+        ELSE 1
+      END AS pts_stayed_above_20
+    FROM
+      lagged
+  ),
+  identified AS (
+    SELECT
+      *,
+      SUM(pts_stayed_above_20) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS streak_identifier
+    FROM
+      did_change
+  )
+SELECT
+  player_name,
+  streak_identifier,
+  COUNT(
+    CASE
+      WHEN pts >= 20 THEN 1
+    END
+  ) AS number_of_consecutive_seasons,
+  MAX(season) AS season_end,
+  MIN(season) AS season_start
+FROM
+  identified
+GROUP BY
+  player_name,
+  streak_identifier
+
+------------------------------------------------------------------
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season,
+      LEAD(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_next_season
+    FROM
+      bootcamp.nba_player_seasons
+    ORDER BY
+      season
+  ),
+  did_change AS (
+    SELECT
+      *,
+      CASE
+        WHEN pts >= 20
+        AND pts_last_season >= 20 THEN 0
+        ELSE 1
+      END AS pts_stayed_above_20
+    FROM
+      lagged
+  ),
+  identified AS (
+    SELECT
+      *,
+      SUM(pts_stayed_above_20) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS streak_identifier
+    FROM
+      did_change
+  )
+SELECT
+  player_name,
+  streak_identifier,
+  COUNT(
+    CASE
+      WHEN pts >= 20 THEN 1
+    END
+  ) AS number_of_consecutive_seasons,
+  MAX(season) AS season_end,
+  MIN(season) AS season_start
+FROM
+  identified
+GROUP BY
+  player_name,
+  streak_identifier
+-------------------------------------------
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season,
+      LEAD(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_next_season
+    FROM
+      bootcamp.nba_player_seasons
+    ORDER BY
+      season
+  ),
+  did_change AS (
+    SELECT
+      *,
+      CASE
+        WHEN pts >= 20
+        AND pts_last_season >= 20 THEN 0
+        ELSE 1
+      END AS pts_stayed_above_20
+    FROM
+      lagged
+  ),
+  identified AS (
+    SELECT
+      *,
+      SUM(pts_stayed_above_20) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS streak_identifier
+    FROM
+      did_change
+  )
+SELECT
+  player_name,
+  streak_identifier,
+  COUNT(
+    CASE
+      WHEN pts >= 20 THEN 1
+    END
+  ) AS number_of_consecutive_seasons,
+  MAX(season) AS season_end,
+  MIN(season) AS season_start
+FROM
+  identified
+GROUP BY
+  player_name,
+  streak_identifier
+----------------------------------------
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season,
+      LEAD(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_next_season
+    FROM
+      bootcamp.nba_player_seasons
+    ORDER BY
+      season
+  ),
+  did_change AS (
+    SELECT
+      *,
+      CASE
+        WHEN pts >= 20
+        AND pts_last_season >= 20 THEN 0
+        ELSE 1
+      END AS pts_stayed_above_20
+    FROM
+      lagged
+  ),
+  identified AS (
+    SELECT
+      *,
+      SUM(pts_stayed_above_20) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS streak_identifier
+    FROM
+      did_change
+  )
+SELECT
+  player_name,
+  COUNT(
+    CASE
+      WHEN pts >= 20 THEN 1
+    END
+  ) AS number_of_consecutive_seasons,
+  MAX(season) AS season_end,
+  MIN(season) AS season_start
+FROM
+  identified
+GROUP BY
+  player_name,
+  streak_identifier
+ORDER BY
+  3 DESC
+------------------------------------------------
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season,
+      LEAD(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_next_season
+    FROM
+      bootcamp.nba_player_seasons
+    ORDER BY
+      season
+  ),
+  did_change AS (
+    SELECT
+      *,
+      CASE
+        WHEN pts >= 20
+        AND pts_last_season >= 20 THEN 0
+        ELSE 1
+      END AS pts_stayed_above_20
+    FROM
+      lagged
+  ),
+  identified AS (
+    SELECT
+      *,
+      SUM(pts_stayed_above_20) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS streak_identifier
+    FROM
+      did_change
+  )
+SELECT
+  player_name,
+  COUNT(
+    CASE
+      WHEN pts >= 20 THEN 1
+    END
+  ) AS number_of_consecutive_seasons,
+  MAX(season) AS season_end,
+  MIN(season) AS season_start
+FROM
+  identified
+GROUP BY
+  player_name,
+  streak_identifier
+ORDER BY
+  2 DESC
+------------------------------------
+consective 30 point season
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season,
+      LEAD(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_next_season
+    FROM
+      bootcamp.nba_player_seasons
+    ORDER BY
+      season
+  ),
+  did_change AS (
+    SELECT
+      *,
+      CASE
+        WHEN pts >= 30
+        AND pts_last_season >= 30 THEN 0
+        ELSE 1
+      END AS pts_stayed_above_20
+    FROM
+      lagged
+  ),
+  identified AS (
+    SELECT
+      *,
+      SUM(pts_stayed_above_20) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS streak_identifier
+    FROM
+      did_change
+  )
+SELECT
+  player_name,
+  COUNT(
+    CASE
+      WHEN pts >= 30 THEN 1
+    END
+  ) AS number_of_consecutive_seasons,
+  MAX(season) AS season_end,
+  MIN(season) AS season_start
+FROM
+  identified
+GROUP BY
+  player_name,
+  streak_identifier
+ORDER BY
+  2 DESC
+
+--------------------------------
+rownumber(),rank(),denserank()
+
+
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season
+    FROM
+      bootcamp.nba_player_seasons
+    ORDER BY
+      season
+  ),
+  did_change AS (
+    SELECT
+      *,
+      CASE
+        WHEN pts >= 20
+        AND pts_last_season >= 20 THEN 0
+        ELSE 1
+      END AS pts_stayed_above_20
+    FROM
+      lagged
+  ),
+  identified AS (
+    SELECT
+      *,
+      SUM(pts_stayed_above_20) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS streak_identifier
+    FROM
+      did_change
+  ),
+  aggregated AS (
+    SELECT
+      player_name,
+      COUNT(
+        CASE
+          WHEN pts >= 20 THEN 1
+        END
+      ) AS consecutive_seasons
+    FROM
+      identified
+    GROUP BY
+      player_name,
+      streak_identifier
+    ORDER BY
+      2 DESC
+  )
+SELECT
+  *,
+  DENSE_RANK() OVER (
+    ORDER BY
+      consecutive_seasons DESC
+  ) AS DENSE_RANK,
+  RANK() OVER (
+    ORDER BY
+      consecutive_seasons DESC
+  ) AS RANK,
+  ROW_NUMBER() OVER (
+    ORDER BY
+      consecutive_seasons DESC
+  ) AS ROW_NUMBER
+FROM
+  aggregated
+
+-----------------------------------
+this creates a table
+
+CREATE TABLE
+  zachwilson.nba_player_consecutive_answer AS
+WITH
+  lagged AS (
+    SELECT
+      player_name,
+      season,
+      pts,
+      LAG(pts, 1) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS pts_last_season
+    FROM
+      bootcamp.nba_player_seasons
+    ORDER BY
+      season
+  ),
+  did_change AS (
+    SELECT
+      *,
+      CASE
+        WHEN pts >= 20
+        AND pts_last_season >= 20 THEN 0
+        ELSE 1
+      END AS pts_stayed_above_20
+    FROM
+      lagged
+  ),
+  identified AS (
+    SELECT
+      *,
+      SUM(pts_stayed_above_20) OVER (
+        PARTITION BY
+          player_name
+        ORDER BY
+          season
+      ) AS streak_identifier
+    FROM
+      did_change
+  ),
+  aggregated AS (
+    SELECT
+      player_name,
+      COUNT(
+        CASE
+          WHEN pts >= 20 THEN 1
+        END
+      ) AS consecutive_seasons
+    FROM
+      identified
+    GROUP BY
+      player_name,
+      streak_identifier
+    ORDER BY
+      2 DESC
+  ),
+  ranked AS (
+    SELECT
+      *,
+      RANK() OVER (
+        ORDER BY
+          consecutive_seasons DESC
+      ) AS DENSE_RANK
+    FROM
+      aggregated
+  )
+SELECT
+  *
+FROM
+  ranked
+WHERE
+  DENSE_RANK <= 10
+ORDER BY
+  consecutive_seasons DESC,
+  player_name
